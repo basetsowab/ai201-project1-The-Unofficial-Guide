@@ -29,53 +29,77 @@
 
 ## Chunking Strategy
 
-**Chunk size:**
-**Overlap:**
+**Chunk size:** one reply per chunk, with its thread title on top — 131 to 280
+characters, 201 on average, 75 chunks from 23 documents. `CHUNK_SIZE` (800) is
+kept only as a safety ceiling; no reply in this corpus comes near it.
+**Overlap:** no reply text is shared between chunks. The thread's `THREAD:`
+title line is repeated at the top of every chunk from that thread, and that
+repeated title is the only overlap.
 
-<!-- What about YOUR documents made you pick these numbers? Short posts and
-     long sectioned guides don't want the same chunking, and "800 seemed
-     reasonable" earns nothing. Point at something you noticed when you read
-     the documents in Milestone 1.
+Why: every document in advice_threads is a forum thread — a `THREAD:` question
+followed by 2–5 replies, each opened by a `--- reply N (V votes) ---` line.
+Documents average only ~540 characters, and each reply is one to three
+sentences giving one person's opinion. Replies in the same thread often
+disagree (the bike thread's second reply starts with "Counterpoint, I sold
+mine"), so keeping a whole thread as one chunk would blend opposite advice into
+one vector. Splitting by character count was worse: the starter's
+`fallback_split` made 26 chunks, cut replies mid-sentence at the 800-character
+mark, and produced a 2-character chunk out of the tail of one thread.
 
-     If you changed your mind partway through, say so and say why. That's worth
-     more than pretending you got it right first time.
+A reply on its own often doesn't say what it is about ("Tuesday and Wednesday
+mornings, every building. Sunday evening is the worst"), which is why the title
+is repeated. With the title, every chunk can answer a question by itself
+without reading its neighbours. The split happens on the reply marker line
+(a regex in `chunker.py`), so it never cuts a sentence.
 
-     Milestone 3. -->
+What I considered and rejected: whole-thread chunks (23 chunks). They would be
+the right call for a corpus of single-topic posts, but here a question about
+the meal-plan *deadline* would match the meal-plan thread equally through its
+replies about *which tier to buy*, and the useful sentence would be buried.
 
 ## Sample Chunks
 
-<!-- Five chunks, pasted as text. Label each one and name the file it came from
-     AND the function that produced it — the grader checks your code against
-     what you claim here.
+Printed with `python app.py chunks -n 5`. All five come from
+`chunker.py::split_documents`.
 
-     `python app.py chunks -n 5` prints all three for you. Copy them straight
-     across.
-
-     Milestone 3. -->
-
-**Chunk 1** — source: `` — produced by: ``
+**Chunk 1** — source: `thread_bike_commute.txt` (chunk #0) — produced by: `chunker.py::split_documents`
 
 ```
+THREAD: Is a bike worth it for a 20 minute walk commute?
+--- reply 1 (14 votes) ---
+Yeah. Cuts an 18 minute walk to about 6. The thing nobody mentions is storage — covered bike parking exists at three buildings and is full by 9am at all three.
 ```
 
-**Chunk 2** — source: `` — produced by: ``
+**Chunk 2** — source: `thread_first_gen.txt` (chunk #1) — produced by: `chunker.py::split_documents`
 
 ```
+THREAD: Anything specific for first-generation students?
+--- reply 2 (41 votes) ---
+The thing I'd say: the unwritten rules are the hard part, not the coursework. Ask about the unwritten rules explicitly. People are happy to explain them and nobody volunteers them.
 ```
 
-**Chunk 3** — source: `` — produced by: ``
+**Chunk 3** — source: `thread_laptop_specs.txt` (chunk #2) — produced by: `chunker.py::split_documents`
 
 ```
+THREAD: How much laptop do I actually need for CS courses?
+--- reply 3 (12 votes) ---
+I did two years on an 8GB machine and it was fine until the last project, at which point it very much wasn't. 16 is the answer.
 ```
 
-**Chunk 4** — source: `` — produced by: ``
+**Chunk 4** — source: `thread_parking.txt` (chunk #1) — produced by: `chunker.py::split_documents`
 
 ```
+THREAD: Worth getting a parking permit?
+--- reply 2 (21 votes) ---
+Street parking on Verrill is legal and free and unmarked, which is why half the upper years do it.
 ```
 
-**Chunk 5** — source: `` — produced by: ``
+**Chunk 5** — source: `thread_sleep_schedule.txt` (chunk #1) — produced by: `chunker.py::split_documents`
 
 ```
+THREAD: Everyone says fix your sleep. Does it actually matter?
+--- reply 2 (37 votes) ---
+The library being open until 2am is a trap. It's a resource, not a schedule.
 ```
 
 ## Sample Answer

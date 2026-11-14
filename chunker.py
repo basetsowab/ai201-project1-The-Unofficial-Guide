@@ -22,6 +22,7 @@ to it, write down what you saw, and move on. That's a real observation about
 your pipeline, not giving up.
 """
 
+import re
 from dataclasses import dataclass
 
 import config
@@ -91,13 +92,58 @@ def split_documents(documents: list[Document]) -> list[Chunk]:
     "chunker.py::split_documents" so your README's Sample Chunks section names
     the right function. `app.py chunks` prints that string for you.
 
-    Things worth thinking about before you write any code:
-      - Are your documents short posts or long guides?
-      - Is the useful information in one sentence, or spread over a paragraph?
-      - Would splitting on paragraph breaks keep more thoughts intact than
-        splitting on a character count?
+    Strategy for advice_threads: ONE CHUNK PER REPLY, each one prefixed with
+    its thread's title line.
+
+    Every document is a `THREAD:` title followed by 2-5 replies, each opened by
+    a `--- reply N (V votes) ---` marker. Replies are one to three sentences and
+    each is a separate opinion (some openly disagree with the one before), so a
+    reply is the natural unit of meaning. On its own, though, a reply often
+    doesn't say what it's about ("Tuesday and Wednesday mornings, every
+    building"), so the title is repeated at the top of every chunk. That
+    repeated title is the overlap: it's the only context neighbouring chunks
+    share, and no reply text is duplicated.
+
+    A document with no reply markers (or a reply longer than CHUNK_SIZE, which
+    doesn't happen in this corpus) falls back to the fixed-window splitter so
+    nothing is silently dropped.
     """
-    return fallback_split(documents)
+    chunks: list[Chunk] = []
+    for doc in documents:
+        lines = doc.text.split("\n")
+        title = lines[0].strip() if lines and lines[0].startswith("THREAD:") else ""
+        parts = _REPLY_MARKER.split(doc.text)
+
+        # parts = [preamble, marker1, body1, marker2, body2, ...]
+        replies = [
+            (parts[i].strip(), parts[i + 1].strip())
+            for i in range(1, len(parts) - 1, 2)
+            if parts[i + 1].strip()
+        ]
+
+        if not title or not replies:
+            chunks.extend(fallback_split([doc]))
+            continue
+
+        for index, (marker, body) in enumerate(replies):
+            text = f"{title}\n{marker}\n{body}"
+            if len(text) > config.CHUNK_SIZE:
+                chunks.extend(fallback_split([Document(doc.source, text)]))
+                continue
+            chunks.append(
+                Chunk(
+                    text=text,
+                    source=doc.source,
+                    index=index,
+                    produced_by="chunker.py::split_documents",
+                )
+            )
+
+    return chunks
+
+
+# Matches the reply header line, e.g. "--- reply 3 (22 votes) ---".
+_REPLY_MARKER = re.compile(r"^(---\s*reply\s+\d+.*?---)\s*$", re.MULTILINE)
 
 
 def describe(chunks: list[Chunk]) -> str:
