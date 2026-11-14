@@ -108,19 +108,28 @@ placeholder, so no answer has been generated yet. Run:
 and paste the output here verbatim, including the "Source:" line.
 ```
 
-Retrieval for this question (from `python app.py retrieve`, no model call),
-so the chunk the answer should come from is visible:
+Retrieval for this question, pasted from
+`python app.py retrieve "Is there a deadline for switching my meal plan tier?"`
+(no model call), so the chunk the answer should come from is visible:
 
 ```
-#   distance   source                           text
-1   0.2198     thread_meal_plan_tier.txt        Remember you can only change it once and only in the first ten days...
-2   0.3357     thread_meal_plan_tier.txt        Declining balance rolls within the semester but not between them...
-3   0.3488     thread_meal_plan_tier.txt        The highest tier only makes sense if you eat three meals a day...
-4   0.3764     thread_meal_plan_tier.txt        Depends entirely on whether your building has a kitchen...
-5   0.5725     thread_first_year_regret.txt     That the add/drop deadline and the withdrawal deadline are different...
+#   distance   source                           preview
+----------------------------------------------------------------------------------------------------
+1   0.2204     thread_meal_plan_tier.txt        THREAD: Which meal plan tier is right? --- reply 3 (...
+2   0.3356     thread_meal_plan_tier.txt        THREAD: Which meal plan tier is right? --- reply 4 (...
+3   0.3489     thread_meal_plan_tier.txt        THREAD: Which meal plan tier is right? --- reply 2 (...
+4   0.3765     thread_meal_plan_tier.txt        THREAD: Which meal plan tier is right? --- reply 1 (...
+5   0.5735     thread_first_year_regret.txt     THREAD: What do you wish you'd known in first year? ...
 
 Gate: best distance 0.220 is under the 0.45 cutoff
 ```
+
+Rank 1 is reply 3: "Remember you can only change it once and only in
+the first ten days."
+
+> **Correction (Unit 2):** an earlier version of this block showed
+> four-decimal distances (0.2198, 0.3357, ...) that were not copied from real
+> output. This one is pasted directly from the command above.
 
 **Top-k:** kept at 5. Every thread has 2–5 replies, so k=5 can bring back a
 whole thread's worth of replies for the question's topic. For the pass/fail
