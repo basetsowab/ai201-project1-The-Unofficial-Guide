@@ -357,48 +357,100 @@ excellent:
 
 ## The Improvement
 
-**What I changed:**
+**What I changed:** the relevance cutoff, `THRESHOLD` in `config.py`, from 0.45
+to 0.40. Nothing else changed between the before and after runs. The scorer
+and eval scripts were committed before the before run, and the after run uses
+them unchanged.
 
-**Why I picked it:**
-
-<!-- Connect it to a specific diagnosis above in one sentence. If you can't,
-     you picked a fix because it sounded impressive. -->
+**Why I picked it:** my two misses (criteria 2 and 5) come from a missing API
+key, and no change to the pipeline can fix that, so I couldn't aim the
+improvement at them. The one pipeline weakness testing found was in the gate:
+"Can I get a refund on my printing quota?" passed at 0.414 even though no
+thread answers it. The chunk it matched says the quota doesn't roll over, but
+nothing about refunds. That's the "on-topic but not an answer" case where a
+model is most likely to write something confident and wrong. My five test
+questions all score 0.291 or below, so 0.40 still leaves 0.11 of margin.
 
 ### Run Log — After
 
-<!-- Same format, same five criteria, three runs each.
-     `python run_eval.py --label after` -->
+Files: `results/run_2026-11-14_1655_after.md` and
+`results/criteria_2026-11-14_1655_after.md`. Three runs, cache off, top-k 5,
+cutoff 0.40.
 
 | Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
 |---|---|---|---|---|---|
-| 1. Retrieved chunk contains the answer | 4 of 5 |  |  |  |  |
-| 2. Every answer names a source | 5 of 5 |  |  |  |  |
-| 3. Gate stops out-of-corpus questions | 4 of 5 |  |  |  |  |
-| 4. | | | | | |
-| 5. | | | | | |
+| 1. Retrieved chunk contains the answer | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 2. Every answer names a source | all answers | 0/5 | 0/5 | 0/5 | MISSED |
+| 3. Gate stops out-of-corpus questions | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 4. Every chunk is one whole reply with title | 100% of chunks | 75/75 | 75/75 | 75/75 | MET |
+| 5. Cited source is the right source | 4 of 5, every run | 0/5 | 0/5 | 0/5 | MISSED |
 
-**Did it help?**
+Side by side, on the measures the change could affect:
 
-<!-- Say plainly whether it did, and how you know. If it made things worse,
-     say that — a change that backfired, honestly reported, earns full credit
-     and is more interesting than one that worked. What matters is that you can
-     tell.
+| Measure | Before (0.45) | After (0.40) |
+|---|---|---|
+| Test questions passing the gate | 5/5 | 5/5 |
+| Criterion 3: out-of-scope refused | 5/5 | 5/5 |
+| Near-miss campus questions refused | 7/8 | 8/8 |
+| Covered-but-vague questions passed | 1/2 | 1/2 |
+| Gap between worst test question and cutoff | 0.159 | 0.109 |
 
-     Milestone 4. -->
+**Did it help?** Only a little, and not on any of my five criteria, whose
+numbers didn't move. It fixed the one near-miss leak (the printing refund
+question is now refused) and cost none of my test questions. It made nothing
+worse on what I measured, but two things count against it:
+
+- **It's fitted to one question.** I picked 0.40 by looking at the 0.414
+  case, so it's tuned to the data I tested on. A new near-miss question at
+  0.39 would get through.
+- **It moved the problem rather than solving it.** The covered winter question
+  (0.460) is still refused, and the margin above my real questions shrank.
+  The gate can't tell "same topic and answers it" from "same topic, doesn't
+  answer it", because embedding distance measures topic, not whether the
+  answer is there.
 
 ## What's Still Broken
 
-<!-- For each criterion still missed after your fix: what you'd do about it,
-     and why you stopped where you did.
-
-     "I ran out of time" is fine if it's true. Pretending nothing is left is
-     not.
-
-     Milestone 5. -->
+- **Criteria 2 and 5 (MISSED): no generated answers.** The fix is a free
+  Gemini key from aistudio.google.com in `.env`, then re-running
+  `python run_eval.py --label after-key` and
+  `python criteria_eval.py --label after-key`. I stopped here because creating
+  that key needs the account owner, and I wasn't going to report answers that
+  were never generated. Until that run happens, the grounding prompt's
+  citation behaviour is untested.
+- **The gate can't separate topic from answer.** This shows up in the
+  near-miss and vague-question checks, not in a criterion. Next I'd try a
+  second signal next to distance: require at least one of the question's
+  content words to appear in the top chunk (BM25 via `rank-bm25`, already
+  installed), or let the grounding prompt handle questions in a 0.35–0.50
+  band. I didn't do it in this unit because the rule is one change.
 
 ## What I'd Do Differently
 
-<!-- Knowing what you know now — which of your five criteria would you write
-     differently, and why?
+- **Criterion 3:** I'd test the gate with near-miss campus questions, not
+  capitals and World Cups. At any sensible cutoff those five pass by a mile,
+  so the criterion couldn't fail.
+- **Criterion 1:** I'd tighten it to "the top-1 chunk contains the answer for
+  5 of 5". 4 of 5 in the top 5 was met with nothing to learn from.
+- **Criterion 2:** I'd add a line saying a failed or empty model call counts
+  as a miss. I decided that in Unit 2, and it should have been written down
+  before the results.
+- **Criterion 4:** I'd drop it, or swap it for one a person has to judge,
+  like "a reader can answer a question from 5 of 5 sampled chunks alone". As
+  written, my chunker passes it by construction.
 
-     Milestone 5. -->
+## How I Used AI — Unit 2
+
+**3. Turning a failed run into evidence.** I told Claude Code I had no Gemini
+key and asked it to do Unit 2 anyway. It changed `run_eval.py::run_once` to
+record a failed model call as the answer instead of crashing. It then called
+criteria 2 and 5 MISSED rather than leaving them blank or making answers up,
+and traced both to the generation stage by checking that the right chunk was
+at rank 1 for all five questions.
+
+**4. Catching a pasted number that wasn't real.** While collecting the Unit 2
+output, Claude noticed that the retrieval block it had written into my Unit 1
+Sample Answer had four-decimal distances it had padded out from three-decimal
+measurements (0.2198 instead of the real 0.2204). It replaced the block with
+the real `app.py retrieve` output and left a correction note instead of
+silently editing it.
