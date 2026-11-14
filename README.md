@@ -1,19 +1,8 @@
 # The Unofficial Guide
 
-<!-- Replace this line with your name and which corpus you picked. -->
+Baset Sowab — corpus: `advice_threads`
 
-> **This file is your submission.** Fill it in as you go — most sections get
-> written during the milestone that produces them, not at the end.
->
-> How the starter works, and every command you'll need, is in `RUNNING.md`.
-> Leave that file alone.
->
-> **Paste everything as text.** No screenshots, no video. A typed table gets
-> full credit; a picture of the same table gets none.
->
-> Delete these instruction blocks as you replace them. The `<!-- -->` comments
-> are notes to you and don't show up when the page renders — you can leave them
-> or remove them.
+How the starter works, and every command, is in `RUNNING.md`.
 
 ---
 
@@ -21,11 +10,15 @@
 
 ## What This Does
 
-<!-- Three or four sentences. Which corpus you picked, and the kinds of
-     questions your system answers. Write it for someone who has never seen
-     this repo.
-
-     Milestone 5. -->
+The Unofficial Guide answers plain-English questions about student life from
+`advice_threads`: 23 forum-style threads where students answer each other's
+questions about things like laundry timing, meal plans, printing quotas,
+pass/fail rules, parking and commuting. Ask it something like "Is there a
+deadline for switching my meal plan tier?" and it finds the closest replies,
+answers from them only, and names the thread file the answer came from. If no
+reply is close enough (best distance over 0.45), it says "I don't have enough
+information about that" instead of guessing. It runs from the command line:
+`python app.py ask "your question"`.
 
 ## Chunking Strategy
 
@@ -198,9 +191,28 @@ answer they don't know to doubt.
 
      Milestone 5. -->
 
-**1.**
+**1. Writing the criteria.** I asked Claude Code (Claude Opus 5.5) to do
+the project for me, end to end. Before writing anything it pointed out that the
+brief says the test questions and criteria 4–5 should be my own and asked how I
+wanted to handle that. I told it to go ahead, so the five questions in
+`questions.py`, criteria 4 and 5, and the "why" lines under all five were
+drafted by Claude from what it read in the corpus. They were committed
+(`b04224d`) before any retrieval was run, so the order the brief asks for held,
+but the wording is the model's, not mine.
 
-**2.**
+**2. Picking the cutoff.** Claude ran my ten questions through retrieval and
+the two groups came out 0.166–0.291 and 0.807–0.896, so any cutoff between 0.3
+and 0.8 would have separated them, and the starter's 0.6 looked fine. Instead
+of stopping there, it tried eight campus-sounding questions the threads don't
+actually answer (gym hours, housing lottery, curved exams). Seven of them
+scored under 0.6, so at 0.6 they would have reached the model. That's why the
+cutoff went down to 0.45. The cost it flagged was that a vague but covered
+question ("What should I wear in winter?", 0.460) now gets refused.
+
+**Setup note:** `pip install -r requirements.txt` failed on Python 3.12 on
+Windows because `chroma-hnswlib` 0.7.6 has no prebuilt wheel for it and needs
+a C++ compiler. Claude checked which versions had wheels and rebuilt the venv
+on Python 3.11, which the course supports.
 
 <!-- ── Stretch features ─────────────────────────────────────────────────────
      Doing one? Say so here BEFORE you start. A feature this README never
