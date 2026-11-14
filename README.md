@@ -238,66 +238,122 @@ on Python 3.11, which the course supports.
 
 ## Run Log — Before
 
-<!-- Your five criteria, three runs each. `python run_eval.py --label before`
-     runs the questions, puts the OUT_OF_SCOPE ones through the gate, and
-     writes it all into results/ for you. Targets come from criteria.md; the
-     verdict column is your call.
+**Read this first:** there is no Gemini API key on this machine, so every
+call to the answer-writing model failed with `400 INVALID_ARGUMENT: API key not
+valid`. Retrieval, the gate and chunking all ran for real. Generation produced
+no answers. I didn't invent any, and the run log shows the failures as they
+happened.
 
-     Criterion 3 is measured in one deterministic pass rather than three, so
-     the same number goes in all three run columns. That's correct, not lazy.
-
-     Milestone 1. -->
+Files: `results/run_2026-11-14_1654_before.md` (from `run_eval.py::main`, one
+row per question) and `results/criteria_2026-11-14_1654_before.md` (from
+`criteria_eval.py::main`, one row per criterion). Three runs, cache off, top-k
+5, cutoff 0.45.
 
 | Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
 |---|---|---|---|---|---|
-| 1. Retrieved chunk contains the answer | 4 of 5 |  |  |  |  |
-| 2. Every answer names a source | 5 of 5 |  |  |  |  |
-| 3. Gate stops out-of-corpus questions | 4 of 5 |  |  |  |  |
-| 4. | | | | | |
-| 5. | | | | | |
+| 1. Retrieved chunk contains the answer | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 2. Every answer names a source | all answers | 0/5 | 0/5 | 0/5 | MISSED |
+| 3. Gate stops out-of-corpus questions | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 4. Every chunk is one whole reply with title | 100% of chunks | 75/75 | 75/75 | 75/75 | MET |
+| 5. Cited source is the right source | 4 of 5, every run | 0/5 | 0/5 | 0/5 | MISSED |
 
-<!-- Underneath, paste the REAL output for each criterion from one of your
-     runs — the actual text your system produced, not a description of it.
-     Name the file and function that produced it. -->
+Criteria 3 and 4 are one deterministic pass each (a fixed gate comparison and a
+count over the chunk list), so the same number is in all three columns.
+Criterion 1 is also deterministic: retrieval returned identical distances on
+all three runs, as the run log shows. The only part that could have varied
+between runs is the model's answer, and it never ran.
+
+**Real output, run 1** (from `results/criteria_2026-11-14_1654_before.md`):
+
+Criterion 1: `store.py::search` for "Is there a deadline for switching my meal
+plan tier?" (expects `ten days`). Rank 1 chunk, distance 0.2204:
+
+```
+THREAD: Which meal plan tier is right?
+--- reply 3 (11 votes) ---
+Remember you can only change it once and only in the first ten days. I waited and got stuck on a plan I didn't use.
+```
+
+Criteria 2 and 5: the answer `run_eval.py::run_once` recorded for that
+question, which is the same for all five questions on all three runs:
+
+```
+[GENERATION FAILED — no answer produced] ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'API key not valid. Please pass a valid API key.', 'status': 'INVALID_ARGUMENT', 'details': [{'@type':
+```
+
+Criterion 3: `run_eval.py::check_out_of_scope`, cutoff 0.45:
+
+```
+0.893  refused  What is the capital of Mongolia?
+0.896  refused  How do I change the oil in a diesel engine?
+0.893  refused  Who won the 1994 World Cup?
+0.807  refused  What is the recommended dosage of ibuprofen for a headache?
+0.835  refused  How do I write a for loop in Rust?
+```
+
+Criterion 4: chunks from `chunker.py::split_documents` failing the
+title / one-reply / 60–400-character test:
+
+```
+(none)
+```
+
+Also recorded, though it isn't a criterion: the near-miss campus questions from
+Unit 1. 7 of 8 were refused. "Can I get a refund on my printing quota?" (0.414)
+got through, and the covered-but-vague "What should I wear in winter?" (0.460)
+was refused.
 
 ## Verdicts
 
-<!-- MET or MISSED for each of the five, against the target you wrote last
-     unit — not a new one. Plus a sentence on how you decided. That sentence
-     matters most where it was close.
-
-     If your target said 4 of 5 and your runs came out 4, 3, 4, that's a MISS.
-     The target has to hold, not show up occasionally.
-
-     Milestone 2. -->
-
 | # | Criterion | Verdict | How I decided |
 |---|---|---|---|
-| 1 |  |  |  |
-| 2 |  |  |  |
-| 3 |  |  |  |
-| 4 |  |  |  |
-| 5 |  |  |  |
+| 1 | Retrieved chunk contains the answer | MET | The `expects` phrase was in a retrieved chunk for 5 of 5 questions on every run, and the target is 4 of 5. Not close. |
+| 2 | Every answer names a source | MISSED | No answer named a file. There were no real answers at all, and an error string isn't a cited answer. The criterion is about what the system produces, and what it produced cited nothing. I'm not calling this "N/A": the user would get no source. |
+| 3 | Gate stops out-of-corpus questions | MET | 5 of 5 refused, against a target of 4 of 5, and the closest out-of-scope question (0.807) is nearly twice the cutoff away. |
+| 4 | Every chunk is one whole reply with title | MET | 75 of 75 chunks passed all three structure checks. The target was 100%, so a single failure would have been a miss. |
+| 5 | Cited source is the right source | MISSED | 0 of 5 in each run, against 4 of 5 in each run. `scorer.py::judge` needs the `expects` phrase and a correct filename in the answer, and the answer held neither. |
+
+**Arguing the other side on 2 and 5:** you could say they were never tested,
+so "missed" is unfair to the pipeline. I still call them missed, because the
+target says what the system has to *produce* and it produced nothing usable. I
+haven't revised either criterion, because the measurement isn't broken: with
+a key, exactly the same check would run unchanged.
 
 ## Diagnoses
 
-<!-- For each miss: which stage caused it, and how. The stage alone isn't
-     enough — you need the mechanism.
+**Criteria 2 and 5: generation stage.** The mechanism: `generate.py::generate`
+sends the prompt to Gemini with the `GEMINI_API_KEY` from `.env`, which is
+still the `.env.example` placeholder. Google rejects it with HTTP 400
+`API_KEY_INVALID`, so no text ever comes back. `run_eval.py::run_once` records
+the exception string as the answer. That string has no `.txt` filename
+(criterion 2) and no `expects` phrase (criterion 5).
 
-     Not a diagnosis: "Question 3 didn't work."
-     A diagnosis:     "Question 3 asks about laundry costs. The answer is in
-                       one sentence that got split across two chunks, so
-                       neither chunk on its own contains it."
+It is *only* the generation stage. Working backwards, as the brief suggests:
+for every one of the five questions, the chunk containing the answer was
+retrieved (at rank 1 for all five), and the gate passed it (best distances
+0.166–0.291, cutoff 0.45). Loading, chunking, embedding and retrieval all did
+their job. The prompt was correct too: `app.py ask --show-prompt` prints the
+right chunks and the grounding instruction.
 
-     The five stages: loading → chunking → embedding → retrieval → generation.
+**Pattern:** both misses are one failure, not two. Every question that reached
+the model failed the same way, with the same error.
 
-     Look for a pattern. If three misses all ask about numbers, that's one
-     problem, not three.
+**What the misses can't tell me:** whether the grounding prompt actually
+makes the model cite correctly. That is the real question behind criteria 2
+and 5, and it is still unanswered.
 
-     Missed nothing? Say so, then say honestly whether your targets were set
-     low, and which one you'd tighten and to what.
+**On the three I met:** they were all met on the first try with room to spare,
+which suggests those targets were safe rather than that the system is
+excellent:
 
-     Milestone 3. -->
+- Criterion 1 at 4 of 5 is loose. All five answers are at **rank 1**, so the
+  stricter version I'd write now is "the top-1 chunk contains the answer for
+  5 of 5".
+- Criterion 3's five `OUT_OF_SCOPE` questions (capital of Mongolia, diesel
+  engines) are so far from campus life that no plausible cutoff would let
+  them through. The real test is the near-miss campus questions, where the
+  gate went 7 of 8.
+- Criterion 4 tests something my own chunker guarantees by construction.
 
 ## The Improvement
 
