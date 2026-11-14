@@ -206,7 +206,7 @@ brief says the test questions and criteria 4–5 should be my own and asked how 
 wanted to handle that. I told it to go ahead, so the five questions in
 `questions.py`, criteria 4 and 5, and the "why" lines under all five were
 drafted by Claude from what it read in the corpus. They were committed
-(`ded199c`, "Milestone 2") before any retrieval was run, so the order the brief asks for held,
+(`a874f4f`, "Milestone 2") before any retrieval was run, so the order the brief asks for held,
 but the wording is the model's, not mine.
 
 **2. Picking the cutoff.** Claude ran my ten questions through retrieval and
