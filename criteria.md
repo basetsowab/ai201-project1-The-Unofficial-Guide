@@ -60,9 +60,12 @@ in at least 4 of 5 tries.
      what happened into your run log. Swap them for your own if you'd rather —
      just keep five of them, or the "4 of 5" above has nothing to be 4 of. -->
 
-**Why this target:**
-<!-- What did your distances look like when you set the cutoff in Milestone 4?
-     Was there a clean gap, or did the two groups overlap? -->
+**Why this target:** When I set the cutoff (0.45) the five `OUT_OF_SCOPE`
+questions scored 0.807–0.896 and my in-corpus questions 0.166–0.291, a clean
+gap, so I expect all five to be refused. I kept 4 of 5 rather than raising it
+to 5 of 5 because I set the cutoff on these exact questions, and the near-miss
+campus questions I also tried (0.414–0.614) show that a question sharing
+vocabulary with a thread can creep much closer than these five do.
 
 ---
 

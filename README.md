@@ -104,30 +104,88 @@ The library being open until 2am is a trap. It's a resource, not a schedule.
 
 ## Sample Answer
 
-<!-- One complete question and answer, pasted as text, with the source line
-     visible. Milestone 4. -->
-
-**Question:**
+**Question:** Is there a deadline for switching my meal plan tier?
 
 **Answer:**
 
 ```
+PENDING — needs a real model response. The Gemini key in .env is still the
+placeholder, so no answer has been generated yet. Run:
+    python app.py ask "Is there a deadline for switching my meal plan tier?"
+and paste the output here verbatim, including the "Source:" line.
 ```
 
-**My relevance cutoff:**
+Retrieval for this question (from `python app.py retrieve`, no model call),
+so the chunk the answer should come from is visible:
 
-<!-- The number you set in config.py, and how you got there.
+```
+#   distance   source                           text
+1   0.2198     thread_meal_plan_tier.txt        Remember you can only change it once and only in the first ten days...
+2   0.3357     thread_meal_plan_tier.txt        Declining balance rolls within the semester but not between them...
+3   0.3488     thread_meal_plan_tier.txt        The highest tier only makes sense if you eat three meals a day...
+4   0.3764     thread_meal_plan_tier.txt        Depends entirely on whether your building has a kitchen...
+5   0.5725     thread_first_year_regret.txt     That the add/drop deadline and the withdrawal deadline are different...
 
-     You ran five questions your corpus covers and the five in OUT_OF_SCOPE
-     that it clearly doesn't, and wrote down the best distance for each. What
-     did those two groups look like? Where was the gap? Put the actual numbers
-     here — the table below wants all ten rows.
+Gate: best distance 0.220 is under the 0.45 cutoff
+```
 
-     Milestone 4. -->
+**Top-k:** kept at 5. Every thread has 2–5 replies, so k=5 can bring back a
+whole thread's worth of replies for the question's topic. For the pass/fail
+question that matters: the answer ("week eight") is in two threads, and the
+`thread_pass_fail.txt` copy only came back at position 4. At k=3 it would
+have been lost, leaving only the `first_year_regret` copy.
+
+**Grounding prompt:** I tightened `GROUNDING_INSTRUCTION` in `generate.py` with
+three rules for this corpus: only cite a file for a claim that's actually in
+that file's excerpt, report replies as what students say and flag it when
+they disagree, and end every answer with a `Source: <filename>` line so
+criterion 2 can be checked by looking at one line.
+
+**My relevance cutoff: 0.45** (`config.THRESHOLD`; the starter shipped 0.6).
+
+Measured with `store.py::search`, top-k 5, on the reply-per-chunk index:
 
 | Question | In corpus? | Best distance |
 |---|---|---|
-|  |  |  |
+| How late in the semester can I still declare a course pass/fail? | yes | 0.291 |
+| How many black and white pages does the $30 printing quota cover? | yes | 0.166 |
+| What days are the dorm laundry machines least busy? | yes | 0.275 |
+| Is there a deadline for switching my meal plan tier? | yes | 0.220 |
+| How much does it cost to rent a locker in the commuter lounge? | yes | 0.289 |
+| What is the capital of Mongolia? | no | 0.893 |
+| How do I change the oil in a diesel engine? | no | 0.896 |
+| Who won the 1994 World Cup? | no | 0.893 |
+| What is the recommended dosage of ibuprofen for a headache? | no | 0.807 |
+| How do I write a for loop in Rust? | no | 0.835 |
+
+The two groups are far apart: in-corpus 0.166–0.291, out-of-corpus
+0.807–0.896. Any number from 0.3 to 0.8 separates *these* ten. So the gap alone
+didn't pick the number. What did was a third group I tried: campus questions
+that sound like they belong but that the threads don't actually answer.
+
+| Near-miss question (not answered by the corpus) | Best distance | Closest file |
+|---|---|---|
+| Can I get a refund on my printing quota? | 0.414 | thread_printing.txt |
+| When do the dorms open in August? | 0.491 | thread_laundry_timing.txt |
+| Which dining hall has the best food? | 0.501 | thread_meal_plan_tier.txt |
+| What time does the campus gym open? | 0.541 | thread_study_spots.txt |
+| Which professor is best for intro CS? | 0.549 | thread_laptop_specs.txt |
+| Is the housing lottery actually random? | 0.573 | thread_transfer_credits.txt |
+| Do professors curve exams? | 0.583 | thread_pass_fail.txt |
+| How do I appeal a parking ticket? | 0.614 | thread_parking.txt |
+
+At the starter's 0.6, seven of those eight would reach the model with chunks
+that are on the right *topic* but don't hold an answer — exactly the case
+where a model writes something plausible and wrong. At 0.45, seven of eight are
+refused and the eighth (printing refund, 0.414) still gets through to the
+grounding prompt, which has to catch it.
+
+What 0.45 gets wrong: vague questions the corpus *does* cover can land above
+it. "What should I wear in winter?" scored 0.460 against
+`thread_winter_advice.txt` and is refused, even though that thread answers it.
+I accepted that: my five test questions sit at 0.291 or below, and a refusal
+is easier for a reader to recover from (rephrase) than a confident wrong
+answer they don't know to doubt.
 
 ## How I Used AI
 

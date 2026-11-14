@@ -279,7 +279,10 @@ Rules:
 - Use only the information in the documents below. Do not use anything you know from elsewhere.
 - If the documents don't cover the question, say you don't have enough information. Do not guess.
 - Name the document your answer came from, using the filename given in each excerpt.
-- Be brief. Two or three sentences is usually enough."""
+- Only cite a file for a claim if that claim appears in that file's excerpt.
+- The documents are student forum replies. Report what students say ("one student says..."), and if replies disagree, say so rather than picking one.
+- Be brief. Two or three sentences is usually enough.
+- End every answer with a line of the form: Source: <filename>[, <filename>]"""
 
 
 def build_prompt(question: str, results) -> str:
