@@ -22,9 +22,15 @@ pipeline earns credit; *"80% seemed reasonable"* does not.
 For at least 4 of my 5 test questions, the retrieved chunks include one that
 contains the answer.
 
-**Why this target:**
-<!-- e.g. "One of my questions is about a topic only two documents mention, so
-     I expect that one to be hard." -->
+**How I check it:** a question counts if the exact `expects` phrase from
+`questions.py` appears in at least one of the top-k retrieved chunks.
+
+**Why this target:** Not 5 of 5, because two of my questions are deliberately
+hard for meaning-only search: the laundry question says "least busy" while the
+thread says "free", and the pass/fail answer is split across two threads that
+both compete for the top slots. Not 3 of 5, because every thread is short and
+on a single topic, so a question naming the topic should land in the right
+thread almost every time.
 
 ---
 
@@ -32,9 +38,14 @@ contains the answer.
 
 Every answer the system produces names at least one source document.
 
-**Why this target:**
-<!-- Why all five and not four? What about your setup makes that achievable —
-     or what would have to go wrong for it not to be? -->
+**How I check it:** an answer counts if it contains a `.txt` filename from
+`corpora/advice_threads/documents/`. A refusal from the gate is not an answer
+and is not counted against this.
+
+**Why this target:** All of them, not most, because citing is the one thing the
+grounding instruction asks for on every single call and every chunk carries its
+filename into the prompt. If even one answer comes back without a filename,
+the prompt isn't doing its job and a reader can't check the claim.
 
 ---
 
@@ -55,43 +66,44 @@ in at least 4 of 5 tries.
 
 ---
 
-## 4. Something about your chunks
+## 4. Every chunk is one whole reply with its thread title
 
-<!-- YOU WRITE THIS ONE.
+Every chunk in the index (100%, counted over the whole corpus, not a sample)
+meets all three of these: it starts with its thread's `THREAD:` line, it holds
+exactly one `--- reply` block, and it is between 60 and 400 characters long.
 
-     How would you know if your chunks were the right size? Name something
-     countable or observable.
+**How I check it:** `python app.py chunks -n 200` prints every chunk; count the
+ones that fail any of the three tests. Zero failures is the target.
 
-     Examples of the right shape — don't copy these, they should come from
-     what you actually saw in Milestone 3:
-       - "At least 4 of 5 sampled chunks read as a complete thought, with no
-          sentence cut in half at either end."
-       - "No chunk is shorter than 200 characters, since anything below that
-          in my corpus turned out to be a heading with no content under it." -->
-
-
-
-**Why this target:**
-
-
+**Why this target:** Every thread in advice_threads is a title plus 2–5 voted
+replies of one to three sentences, and each reply is a separate opinion. A
+reply without its title loses the topic ("Tuesday and Wednesday mornings,
+every building" — of what?), and two replies merged together mix advice that
+often disagrees (the bike thread's reply 2 is literally "Counterpoint"). The
+60 floor is there because the starter's chunker made a 2-character chunk out of
+the tail of a thread; the 400 ceiling is about the longest reply plus its
+title, so anything bigger means replies got merged. It is 100% and not "most"
+because this is a structural property of my chunker, not a judgment call: if
+one chunk breaks it, the splitting rule is wrong.
 
 ---
 
-## 5. Your choice
+## 5. The cited source is the right source
 
-<!-- YOU WRITE THIS ONE TOO.
+In each of the three runs, for at least 4 of my 5 test questions the answer
+both contains the `expects` phrase from `questions.py` and names a source file
+that actually contains that phrase.
 
-     Pick something you actually care about getting right. It could be about
-     speed, about refusals, about a particular kind of question your corpus
-     handles badly, about source attribution being correct rather than merely
-     present — anything, as long as it names a number or an observable
-     outcome. -->
+**How I check it:** for each answer, look for the `expects` phrase, then check
+that at least one `.txt` file named in the answer contains that phrase on disk.
+A refusal counts as a miss.
 
-
-
-**Why this target:**
-
-
+**Why this target:** Criterion 2 only checks that *a* filename appears; this one
+checks it's the *right* one, which is what a student reading the answer would
+actually rely on. 4 of 5 and not 5 of 5 because the pass/fail question has its
+answer in two threads and the laundry question is paraphrased, so I expect at
+least one of them to wobble. It has to hold in every run, not on average,
+because a citation that's right two times in three isn't one you can trust.
 
 ---
 

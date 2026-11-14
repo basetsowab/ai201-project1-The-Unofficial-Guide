@@ -22,12 +22,21 @@ names a target of "4 of 5", and four of three is not a thing.
 """
 
 QUESTIONS = [
-    # {"question": "...", "expects": "..."},
-    {"question": "", "expects": ""},
-    {"question": "", "expects": ""},
-    {"question": "", "expects": ""},
-    {"question": "", "expects": ""},
-    {"question": "", "expects": ""},
+    # The answer appears in TWO threads (pass_fail and first_year_regret).
+    {"question": "How late in the semester can I still declare a course pass/fail?",
+     "expects": "week eight"},
+    # A number buried in a reply about colour printing.
+    {"question": "How many black and white pages does the $30 printing quota cover?",
+     "expects": "600"},
+    # Paraphrased on purpose: the thread says "free", the question says "least busy".
+    {"question": "What days are the dorm laundry machines least busy?",
+     "expects": "Tuesday"},
+    # The answer is in reply 3 of 4, below two replies about which tier to pick.
+    {"question": "Is there a deadline for switching my meal plan tier?",
+     "expects": "ten days"},
+    # A specific price in a thread that is mostly about bus timetables and trains.
+    {"question": "How much does it cost to rent a locker in the commuter lounge?",
+     "expects": "$20"},
 ]
 
 # Questions from a different world entirely. Your gate should refuse all five.
