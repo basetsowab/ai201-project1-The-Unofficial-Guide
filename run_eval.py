@@ -64,8 +64,18 @@ def run_once(question: str, top_k, threshold, corpus, variant):
         return gate.REFUSAL, results, decision
 
     # cache=False on purpose. Three runs have to be three real answers.
-    answer = answer_from_chunks(question, results, cache=False)
+    # If the model call fails (no API key, quota, network), record the failure
+    # as the answer instead of crashing, so retrieval and gate evidence for
+    # every question still lands in results/. A failure is never scored as a
+    # pass: it contains no source filename and no expects phrase.
+    try:
+        answer = answer_from_chunks(question, results, cache=False)
+    except Exception as exc:  # noqa: BLE001
+        answer = f"{GENERATION_FAILED} {type(exc).__name__}: {str(exc)[:160]}"
     return answer, results, decision
+
+
+GENERATION_FAILED = "[GENERATION FAILED — no answer produced]"
 
 
 def main():
